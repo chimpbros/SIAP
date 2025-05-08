@@ -1,35 +1,34 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import './App.css'; // Keep or remove default App.css as needed
+
+// Placeholder for DashboardPage
+const DashboardPage: React.FC = () => {
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <p>Welcome to the SIAP application dashboard!</p>
+      {/* TODO: Add logout button and other dashboard content */}
+    </div>
+  );
+};
+
+// Placeholder for a ProtectedRoute component (to be implemented later)
+// For now, Dashboard is directly accessible for routing setup.
+// We will add actual protection based on auth state later.
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Routes>
+      <Route path="/" element={<Navigate replace to="/login" />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/dashboard" element={<DashboardPage />} /> {/* Placeholder */}
+      {/* TODO: Add other routes like /add, /archive, /admin */}
+      {/* TODO: Implement ProtectedRoute for routes requiring authentication */}
+    </Routes>
+  );
 }
 
-export default App
+export default App;
