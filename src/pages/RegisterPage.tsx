@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-
-// TODO: Import Firebase auth functions, Firestore functions, and navigation hooks
+import { Link, useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../firebase-config';
 
 const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
   const [namaLengkap, setNamaLengkap] = useState('');
   const [pangkat, setPangkat] = useState('');
   const [nrp, setNrp] = useState('');
@@ -31,20 +33,47 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    // TODO: Implement Firebase registration logic
-    // 1. Create user with email and password in Firebase Auth
-    // 2. On success, save user details (nama, pangkat, nrp, email, is_admin: false, is_approved: false, registration_timestamp) to Firestore 'users' collection with UID as doc ID.
-    // 3. Handle errors (email already in use, weak password, etc.)
-    // 4. Display success message and optionally redirect or clear form.
-    // 5. Consider triggering a Cloud Function for admin notification.
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-    console.log('Attempting registration with:', { namaLengkap, pangkat, nrp, email, password });
-    // Placeholder for actual registration logic
-    setTimeout(() => {
-      setSuccess('Fungsi registrasi belum diimplementasikan. Anggap berhasil untuk UI testing.');
-      // setError('Fungsi registrasi belum diimplementasikan.');
+      // Save user details to Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: email,
+        nama: namaLengkap,
+        pangkat: pangkat,
+        nrp: nrp,
+        is_admin: false,
+        is_approved: false,
+        registration_timestamp: serverTimestamp(),
+      });
+
+      setSuccess("Pendaftaran berhasil! Akun Anda menunggu persetujuan admin. Anda akan dialihkan ke halaman Login.");
+      // Optionally clear form fields
+      setNamaLengkap('');
+      setPangkat('');
+      setNrp('');
+      setEmail('');
+      setPassword('');
+      setKonfirmasiPassword('');
+      
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
+
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Email sudah terdaftar. Silakan gunakan email lain.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('Password terlalu lemah. Minimal 6 karakter.');
+      } else {
+        setError('Terjadi kesalahan saat pendaftaran. Silakan coba lagi.');
+      }
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (

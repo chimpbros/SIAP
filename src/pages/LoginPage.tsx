@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-
-// TODO: Import Firebase auth functions and navigation hooks
+import { Link, useNavigate } from 'react-router-dom';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase-config';
 
 const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -20,18 +22,41 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    // TODO: Implement Firebase login logic
-    // 1. Sign in with email and password
-    // 2. Check user's 'is_approved' status in Firestore
-    // 3. Handle errors (wrong password, user not found, not approved, disabled)
-    // 4. Redirect to dashboard on success
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-    console.log('Attempting login with:', { email, password });
-    // Placeholder for actual login logic
-    setTimeout(() => {
-      setError('Fungsi login belum diimplementasikan.');
+      // Check user's approval status in Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        if (userData.is_approved) {
+          // User is approved, redirect to dashboard
+          navigate('/dashboard');
+        } else {
+          // User not approved
+          await signOut(auth); // Sign out the user
+          setError('Akun Anda belum disetujui admin.');
+        }
+      } else {
+        // User document doesn't exist in Firestore (should not happen if registration is correct)
+        await signOut(auth);
+        setError('Data pengguna tidak ditemukan. Silakan hubungi admin.');
+      }
+    } catch (err: any) {
+      console.error("Login error:", err);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError('Email atau password salah.');
+      } else if (err.code === 'auth/user-disabled') {
+        setError('Akun Anda telah dinonaktifkan.');
+      } else {
+        setError('Terjadi kesalahan saat login. Silakan coba lagi.');
+      }
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
