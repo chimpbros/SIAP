@@ -7,9 +7,12 @@ import { auth, db } from '../firebase-config';
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  isApproved: boolean; // Add approval status
-  isAdmin: boolean; // Add admin status
-  // TODO: Potentially add user profile data (nama, pangkat, nrp) here later
+  isApproved: boolean;
+  isAdmin: boolean;
+  // Add user profile data
+  nama: string | null;
+  pangkat: string | null;
+  nrp: string | null;
 }
 
 // Create the context with a default value
@@ -35,16 +38,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isApproved, setIsApproved] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [nama, setNama] = useState<string | null>(null);
+  const [pangkat, setPangkat] = useState<string | null>(null);
+  const [nrp, setNrp] = useState<string | null>(null);
 
   useEffect(() => {
     // Subscribe to Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      setIsApproved(false); // Reset on user change
-      setIsAdmin(false); // Reset on user change
+      // Reset all user-specific data on auth state change
+      setIsApproved(false);
+      setIsAdmin(false);
+      setNama(null);
+      setPangkat(null);
+      setNrp(null);
 
       if (user) {
-        // If user is logged in, fetch their Firestore data for approval/admin status
+        // If user is logged in, fetch their Firestore data
+        setLoading(true); // Set loading true while fetching Firestore data
         try {
           const userDocRef = doc(db, "users", user.uid);
           const userDocSnap = await getDoc(userDocRef);
@@ -52,17 +63,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const userData = userDocSnap.data();
             setIsApproved(userData.is_approved === true);
             setIsAdmin(userData.is_admin === true);
+            setNama(userData.nama || null);
+            setPangkat(userData.pangkat || null);
+            setNrp(userData.nrp || null);
           } else {
             console.warn("User document not found in Firestore for UID:", user.uid);
             // Keep isApproved/isAdmin as false
           }
         } catch (error) {
           console.error("Error fetching user data from Firestore:", error);
-          // Keep isApproved/isAdmin as false
+          // Keep states as default (false/null)
+        } finally {
+          // Set loading to false after attempting to fetch Firestore data
+          setLoading(false);
         }
+      } else {
+        // No user logged in, set loading to false
+        setLoading(false);
       }
-      // Set loading to false once auth state is determined and Firestore data (if applicable) is fetched
-      setLoading(false);
     });
 
     // Cleanup subscription on unmount
@@ -75,6 +93,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     isApproved,
     isAdmin,
+    nama,
+    pangkat,
+    nrp,
   };
 
   // Render children only when not loading
